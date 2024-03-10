@@ -35,6 +35,9 @@ def draw(canvas):
     # Draw projectiles
     for pos in projectile_pos:
         canvas.draw_circle(pos, PROJECTILE_RADIUS, 1, 'White', 'White')
+
+    # Update projectile positions
+    update_projectiles()
     
     # Update and draw spaceship position
     spaceship_pos[0] += spaceship_vel
