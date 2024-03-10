@@ -20,8 +20,6 @@ projectile_vel = [5, 0]
 # Speed of the projectiles
 projectile_speed = 2
 
-# Define helper functions
-
 # Draw handler to draw the spaceship and projectiles
 def draw(canvas):
     global spaceship_pos, projectile_pos
@@ -35,16 +33,12 @@ def draw(canvas):
     # Draw projectiles
     for pos in projectile_pos:
         canvas.draw_circle(pos, PROJECTILE_RADIUS, 1, 'White', 'White')
-
+    
     # Update projectile positions
     update_projectiles()
     
     # Update and draw spaceship position
     spaceship_pos[0] += spaceship_vel
-
-# Function to update the game state and initiate firing of projectiles
-def update():
-    pass
 
 # Function to update the positions of projectiles and check if they have left the frame
 def update_projectiles():
@@ -62,7 +56,7 @@ def keydown(key):
         spaceship_vel = -5  # Move left
     elif key == simplegui.KEY_MAP['d']:
         spaceship_vel = 5   # Move right
-    elif key == simplegui.KEY_MAP['space']:
+    elif key == simplegui.KEY_MAP['space'] and len(projectile_pos) == 0:  # Fire only if no projectile exists
         # Fire projectile from the spaceship's position
         projectile_pos.append([spaceship_pos[0], spaceship_pos[1] - SPACESHIP_HEIGHT // 2])
 
@@ -78,7 +72,3 @@ frame.set_draw_handler(draw)
 frame.set_keydown_handler(keydown)
 frame.set_keyup_handler(keyup)
 frame.start()
-
-# Timer to continuously update the game state
-timer = simplegui.create_timer(1000 // 60, update)
-timer.start()
