@@ -10,7 +10,7 @@ spaceship_pos = [WIDTH // 2, HEIGHT - 50]
 spaceship_vel = 0
 projectile_pos = []
 projectile_vel = [-5, 0]
-projectile_speed = 5
+projectile_speed = 2
 is_firing = True
 
 # Define helper functions
