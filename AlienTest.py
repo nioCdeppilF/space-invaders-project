@@ -130,24 +130,98 @@ import random
 
 GAME_OVER_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Space_Invaders_GameOver_Screen.png"
 LIVES_COUNTER = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Lives_Sprite.jpg"
+
+ALIEN_ROW1 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row1.jpg"
+ALIEN_ROW2 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row2.jpg"
+ALIEN_ROW3 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row3.png"
+
+
 CW = 800
 CH = 600
-TIMER = 30 / 4
+TIMER = 30 *2
 GAME_OVER_BARRIER = CH - 100 - 50
 
 class Alien:
-    def __init__(self, pos):
+    def __init__(self, pos, count):
         self.pos = pos
-        self.radius = 15
-        self.color = "White"
+        self.radius = 5
+        self.c = count
+
+        self.num_frame = 2
+        self.framecount = 0
+        self.frame_index = [0, 0]
+
 
     def hit_barrier(self, a):
         return GAME_OVER_BARRIER-15 <= a.pos.get_p()[1]
 
     def draw(self, canvas):
-        canvas.draw_circle(self.pos.get_p(), self.radius, 1, self.color, self.color)
+        canvas.draw_circle(self.pos.get_p(), self.radius, 1, "white", "white")
+        if self.c < 11:
+            self.alien_40_points(canvas)
+        elif self.c < 33:
+            self.alien_20_points(canvas)
+        else:
+            self.alien_10_points(canvas)
+
+
         canvas.draw_line((0, GAME_OVER_BARRIER), (CW, GAME_OVER_BARRIER), 2, "#42f5c8")
         canvas.draw_line((0,CH-45), (CW, CH-45), 5, "#00ff00")
+
+
+    def alien_10_points(self, canvas):
+        alien_10_img = simplegui.load_image(ALIEN_ROW1)
+        width, height = alien_10_img.get_width(), alien_10_img.get_height()
+
+        frame_width = width / 2
+        frame_height = height
+        frame_centre_x = frame_width / 2
+        frame_centre_y = frame_height / 2
+
+        frame_window = (frame_width * self.frame_index[0] + frame_centre_x,
+                        frame_height * self.frame_index[1] + frame_centre_y)
+        frame_window_size = (frame_width, frame_height)
+
+        canvas.draw_image(alien_10_img, frame_window, frame_window_size, self.pos.get_p(), (50, 45))
+
+
+    def alien_20_points(self, canvas):
+        alien_20_img = simplegui.load_image(ALIEN_ROW2)
+
+        width, height = alien_20_img.get_width(), alien_20_img.get_height()
+
+        frame_width = width / 2
+        frame_height = height
+        frame_centre_x = frame_width / 2
+        frame_centre_y = frame_height / 2
+
+        frame_window = (frame_width * self.frame_index[0] + frame_centre_x,
+                        frame_height * self.frame_index[1] + frame_centre_y)
+        frame_window_size = (frame_width, frame_height)
+
+        canvas.draw_image(alien_20_img, frame_window, frame_window_size, self.pos.get_p(), (50, 45))
+
+    def alien_40_points(self, canvas):
+        alien_40_img = simplegui.load_image(ALIEN_ROW3)
+
+        width, height = alien_40_img.get_width(), alien_40_img.get_height()
+
+        frame_width = width / 2
+        frame_height = height
+        frame_centre_x = frame_width / 2
+        frame_centre_y = frame_height / 2
+
+        frame_window = (frame_width * self.frame_index[0] + frame_centre_x,
+                        frame_height * self.frame_index[1] + frame_centre_y)
+        frame_window_size = (frame_width, frame_height)
+
+        canvas.draw_image(alien_40_img, frame_window, frame_window_size, self.pos.get_p(), (50, 40))
+
+
+    def next_frame(self):
+        self.frame_index[0] = (self.frame_index[0] + 1) % 2
+
+
 
 
 class Lives:
@@ -242,6 +316,7 @@ class Integrate:
             self.alien_list[a].draw(canvas)
             if self.clock.transition(TIMER):
                 self.update()
+                self.alien_list[a].next_frame()
 
     def points(self, canvas):
         canvas.draw_text(f"Score:", (0, CH - 10), 40, self.score_colour)
@@ -288,9 +363,12 @@ class Integrate:
 
 aliens = []
 j_d = 15
+point = 40
+count = 0
 for i in range(5):
     for j in range(11):
-        aliens.append(Alien(Vector(20 + (j * 50), j_d)))
+        aliens.append(Alien(Vector(20 + (j * 50), j_d), count))
+        count += 1
     j_d += 50
 
 player_lives = []
@@ -304,6 +382,6 @@ clock = Clock()
 i = Integrate(clock, aliens, player_lives)
 
 frame.set_draw_handler(i.draw)
-# frame.set_canvas_background("#b0b0b0")
+#frame.set_canvas_background("#b0b0b0")
 frame.start()
 #AlienCode by bbksleazy
