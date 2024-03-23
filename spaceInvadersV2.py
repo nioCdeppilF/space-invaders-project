@@ -372,6 +372,11 @@ class Integrate:
         spaceship_pos.add(spaceship_vel)
         # Update player position in the player sprite
         self.player.pos = spaceship_pos.copy()
+        # Ensure the player spaceship stays within the canvas boundaries
+        if spaceship_pos.x < img_dims[0] // 2:  # Left edge
+            spaceship_pos.x = img_dims[0] // 2
+        elif spaceship_pos.x > CW - img_dims[0] // 2:  # Right edge
+            spaceship_pos.x = CW - img_dims[0] // 2
 
     def game_over_text(self, canvas):
         if self.game_over == True:
