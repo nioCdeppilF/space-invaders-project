@@ -87,7 +87,7 @@ class PlayerSprite:
         # Update the position based on the velocity
         self.pos.add(self.vel)
 
-# Function to update projectile positions and handle collisions
+# Update function for projectile collisions with aliens
 def update_projectiles():
     global projectile_pos, aliens, i
     
@@ -100,11 +100,15 @@ def update_projectiles():
         
         # Iterate over aliens
         for alien in aliens_copy:
-            # Check for collision between projectile and alien
-            if (pos.x > alien.pos.x - alien.radius and
-                pos.x < alien.pos.x + alien.radius and
-                pos.y > alien.pos.y - alien.radius and
-                pos.y < alien.pos.y + alien.radius):
+            # Calculate the actual hitbox for the alien sprite
+            hitbox = (alien.pos.x - alien.hitbox_width / 2,  # left
+                      alien.pos.x + alien.hitbox_width / 2,  # right
+                      alien.pos.y - alien.hitbox_height / 2, # top
+                      alien.pos.y + alien.hitbox_height / 2) # bottom
+            
+            # Check if the projectile intersects with the hitbox
+            if (pos.x >= hitbox[0] and pos.x <= hitbox[1] and
+                pos.y >= hitbox[2] and pos.y <= hitbox[3]):
                 
                 # Remove the collided projectile and alien
                 projectile_pos.remove(pos)
@@ -145,9 +149,21 @@ class Alien:
         self.radius = 5
         self.c = count
 
+        # Alien sprite dimensions
+        self.width = 50
+        self.height = 45
+        
+        # Hitbox dimensions
+        self.hitbox_width = self.width
+        self.hitbox_height = self.height
+
         self.num_frame = 2
         self.framecount = 0
         self.frame_index = [0, 0]
+
+        # Define animation parameters
+        self.animation_delay = 10  # Adjust as needed
+        self.frame_change_counter = 0
 
     def hit_barrier(self, a):
         return GAME_OVER_BARRIER-15 <= a.pos.get_p()[1]
@@ -212,7 +228,11 @@ class Alien:
         canvas.draw_image(alien_40_img, frame_window, frame_window_size, self.pos.get_p(), (50, 40))
 
     def next_frame(self):
-        self.frame_index[0] = (self.frame_index[0] + 1) % 2
+        if self.frame_change_counter == self.animation_delay:
+            self.frame_index[0] = (self.frame_index[0] + 1) % 2
+            self.frame_change_counter = 0
+        else:
+            self.frame_change_counter += 1
 
 # Define the Lives class
 class Lives:
@@ -283,11 +303,13 @@ class Integrate:
         self.score_colour, self.score_num_colour = 'White', '#00fc04'
 
     def draw(self, canvas):
-        self.clock.tick()
-        self.game_over_text(canvas)
+        global spaceship_pos
+
+        # Update player position based on velocity
+        spaceship_pos.add(spaceship_vel)
 
         # Draw the player sprite
-        self.player.draw(canvas)
+        player.draw(canvas)
 
         # Draw the projectiles
         for pos in projectile_pos:
@@ -297,23 +319,23 @@ class Integrate:
         update_projectiles()
 
         # Draw the lives
-        [l.draw(canvas) for l in self.lives]
-
-        # Handle alien drawing
-        if len(self.lives) > 0:
-            self.lives[0].takeDamage()
-            self.lives[1].takeDamage()
+        for life in player_lives:
+            life.draw(canvas)
 
         # Draw the score
-        self.points(canvas)
+        i.points(canvas)
 
-        for a in range(len(self.alien_list)):
-            self.alien_list[a].draw(canvas)
-            if self.clock.transition(TIMER):
-                self.update()
-                self.alien_list[a].next_frame()
-        
+        # Draw the aliens and handle animation
+        for alien in aliens:
+            alien.draw(canvas)
+            if clock.transition(TIMER):
+                alien.next_frame()
+
+        # Update the game state
         self.update()
+
+        # Check for game over condition and display game over screen if necessary
+        i.game_over_text(canvas)
 
     def calc_lives(self):
         local_counter = 3
@@ -350,6 +372,11 @@ class Integrate:
         spaceship_pos.add(spaceship_vel)
         # Update player position in the player sprite
         self.player.pos = spaceship_pos.copy()
+        # Ensure the player spaceship stays within the canvas boundaries
+        if spaceship_pos.x < img_dims[0] // 2:  # Left edge
+            spaceship_pos.x = img_dims[0] // 2
+        elif spaceship_pos.x > CW - img_dims[0] // 2:  # Right edge
+            spaceship_pos.x = CW - img_dims[0] // 2
 
     def game_over_text(self, canvas):
         if self.game_over == True:
