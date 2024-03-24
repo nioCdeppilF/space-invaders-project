@@ -17,6 +17,14 @@ TIMER = 30 * 2
 GAME_OVER_BARRIER = CH - 100 - 50
 PROJECTILE_RADIUS = 3
 
+# Constants for Alien projectiles
+alien_projectiles = []
+ALIEN_PROJECTILE_SPEED = 3
+
+# Timer for controlling alien firing
+alien_fire_timer = 0
+ALIEN_FIRE_INTERVAL = 5 * 30  # 5 seconds (assuming 30 ticks per second)
+
 # Load player sprite image
 img = simplegui.load_image(PLAYER_SPRITE)
 img_dims = (110, 64)
@@ -141,6 +149,36 @@ def keyup(key):
     if key == simplegui.KEY_MAP['left'] or key == simplegui.KEY_MAP['right']:
         spaceship_vel.x = 0
 
+# Collision detection function for alien projectiles and player sprite
+def check_collision_with_player():
+    global alien_projectiles, player_lives
+    
+    # Iterate over alien projectiles
+    projectiles_to_remove = []  # Store projectiles to remove to avoid modifying list while iterating
+    for projectile in alien_projectiles:
+        # Calculate the distance between projectile and player sprite center
+        distance = math.sqrt((projectile.x - player.pos.x) ** 2 + (projectile.y - player.pos.y) ** 2)
+        
+        # If the distance is less than the sum of radii, it's a collision
+        if distance <= PROJECTILE_RADIUS + img_dims[1] // 2:
+            # Remove the projectile
+            projectiles_to_remove.append(projectile)
+            
+            # Reduce player lives count
+            if player_lives:
+                player_lives.pop()
+                
+            # Check if player has run out of lives
+            if not player_lives:
+                i.game_over = True
+
+    # Remove collided projectiles from the list
+    for projectile in projectiles_to_remove:
+        alien_projectiles.remove(projectile)
+
+# Update function for collisions
+def update_collisions():
+    check_collision_with_player()
 
 # Define the Alien class
 class Alien:
@@ -234,6 +272,10 @@ class Alien:
         else:
             self.frame_change_counter += 1
 
+    def fire_projectile(self, player_pos):
+        alien_pos = Vector(self.pos.x, self.pos.y + self.height / 2)
+        return Vector(player_pos.x - alien_pos.x, player_pos.y - alien_pos.y).multiply(0.05)
+
 # Define the Lives class
 class Lives:
     def __init__(self, pos, damaged):
@@ -294,6 +336,7 @@ class Integrate:
         self.alien_list = alien
         self.lives = lives
         self.player = player
+        self.game_won = False
         self.score = 0
 
         self.vel = Vector(0.5, 0)
@@ -315,8 +358,15 @@ class Integrate:
         for pos in projectile_pos:
             canvas.draw_circle(pos.get_p(), PROJECTILE_RADIUS, 1, 'White', 'White')
 
+        # Draw the alien projectiles
+        for pos in alien_projectiles:
+            canvas.draw_circle(pos.get_p(), PROJECTILE_RADIUS, 1, 'Red', 'Red')
+
         # Update projectile positions
         update_projectiles()
+
+        # Update alien projectile positions
+        self.update_alien_projectiles()
 
         # Draw the lives
         for life in player_lives:
@@ -334,15 +384,72 @@ class Integrate:
         # Update the game state
         self.update()
 
+        # Update collisions
+        update_collisions()
+
+        # Update alien actions
+        self.update_aliens()
+
+        # Update alien fire
+        self.update_alien_fire(aliens)
+        
         # Check for game over condition and display game over screen if necessary
         i.game_over_text(canvas)
+    
+    def update_aliens(self):
+        global alien_fire_timer, aliens, alien_projectiles
+
+        # Update the alien fire timer
+        alien_fire_timer += 1
+
+        # Check if it's time for an alien to fire
+        if alien_fire_timer >= ALIEN_FIRE_INTERVAL:
+            # Select aliens from the back row for firing
+            back_row_aliens = [alien for alien in self.alien_list if alien.pos.y == 185]
+            if back_row_aliens:
+                alien_to_fire = random.choice(back_row_aliens)
+                # Fire projectile from the selected alien
+                alien_projectiles.append(Vector(alien_to_fire.pos.x, alien_to_fire.pos.y + 20))
+            # Reset the timer
+            alien_fire_timer = 0
+    
+    def update_alien_fire(self, aliens):
+        global alien_fire_timer, alien_projectiles
+
+        # Increment the timer
+        alien_fire_timer += 1
+        
+        # Check if it's time for an alien to fire
+        if alien_fire_timer >= ALIEN_FIRE_INTERVAL:
+            # Select aliens from the row closest to the bottom that are still present on the screen
+            available_rows = set(alien.pos.y for alien in aliens)
+            available_rows = sorted(available_rows)
+            for row in available_rows:
+                row_aliens = [alien for alien in aliens if alien.pos.y == row]
+                if row_aliens:
+                    # Select a random alien from this row to fire
+                    alien_to_fire = random.choice(row_aliens)
+                    # Fire projectile from the selected alien
+                    alien_projectiles.append(Vector(alien_to_fire.pos.x, alien_to_fire.pos.y + 20))
+                    # Reset the timer
+                    alien_fire_timer = 0
+                    break
+
+    def update_alien_projectiles(self):
+        global alien_projectiles
+
+        # Iterate over alien projectiles
+        for pos in alien_projectiles:
+            pos.add(Vector(0, ALIEN_PROJECTILE_SPEED))
+
+        # Remove projectiles that have left the frame
+        alien_projectiles = [pos for pos in alien_projectiles if pos.y < CH]
 
     def calc_lives(self):
         local_counter = 3
-        if len(self.lives) > 0:
-            for i in range(3):
-                if self.lives[i].life_gone() == True:
-                    local_counter -= 1
+        for life in self.lives:
+            if life.life_gone():
+                local_counter -= 1
         return local_counter
 
     def points(self, canvas):
@@ -372,28 +479,44 @@ class Integrate:
         spaceship_pos.add(spaceship_vel)
         # Update player position in the player sprite
         self.player.pos = spaceship_pos.copy()
+
         # Ensure the player spaceship stays within the canvas boundaries
         if spaceship_pos.x < img_dims[0] // 2:  # Left edge
             spaceship_pos.x = img_dims[0] // 2
         elif spaceship_pos.x > CW - img_dims[0] // 2:  # Right edge
             spaceship_pos.x = CW - img_dims[0] // 2
 
-    def game_over_text(self, canvas):
-        if self.game_over == True:
-            go_img = simplegui.load_image(GAME_OVER_MESSAGE)
-            self.width_gom, self.height_gom = go_img.get_width(), go_img.get_height()
-            if self.clock.transition(TIMER):
-                self.alien_list.clear()
-                self.lives.clear()
-                self.score_colour, self.score_num_colour = '#000000', '#000000'
-            canvas.draw_image(go_img, (self.width_gom / 2, self.height_gom / 2),
-                              (self.width_gom, self.height_gom), (CW / 2, CH / 2),
-                              (CW * 3 / 4, CH * 1 / 2))
-            canvas.draw_text(f"Score:", (0, 30), 30, 'White')
-            canvas.draw_text(f"{self.score}", (80, 31), 30, '#00fc04')
-            canvas.draw_text(f"Lives:", (CW-100, 30), 30, 'White')
-            canvas.draw_text(f"0", (CW - 20, 31), 30, '#ff0000')
+        # Check for game over condition and set game_over attribute
+        if self.calc_lives() == 0:
+            self.game_over = True
+            self.game_won = False
 
+        # Check if all aliens are removed
+        if not self.alien_list:
+            self.game_won = True
+            self.game_over = True
+
+    def game_over_text(self, canvas):
+        if self.game_over:
+            if self.game_won:
+                # Display "GAME OVER, YOU WON" message
+                canvas.draw_text("GAME OVER, YOU WON", (CW / 2 - 200, CH / 2), 40, 'White')
+            else:
+                # Display "GAME OVER" message
+                go_img = simplegui.load_image(GAME_OVER_MESSAGE)
+                self.width_gom, self.height_gom = go_img.get_width(), go_img.get_height()
+                if self.clock.transition(TIMER):
+                    alien_projectiles.clear()
+                    self.alien_list.clear()
+                    self.lives.clear()
+                    self.score_colour, self.score_num_colour = '#000000', '#000000'
+                canvas.draw_image(go_img, (self.width_gom / 2, self.height_gom / 2),
+                                (self.width_gom, self.height_gom), (CW / 2, CH / 2),
+                                (CW * 3 / 4, CH * 1 / 2))
+                canvas.draw_text("Score:", (0, 30), 30, 'White')
+                canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
+                canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
+                canvas.draw_text(str(self.calc_lives()), (CW - 20, 31), 30, '#ff0000')
 
 # List to store instances of aliens
 aliens = []
