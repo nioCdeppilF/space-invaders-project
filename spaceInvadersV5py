@@ -98,7 +98,7 @@ class PlayerSprite:
         self.pos.add(self.vel)
 
 def update_projectiles():
-    global projectile_pos, aliens
+    global projectile_pos, defenses
     
     # Iterate over player projectiles
     player_projectiles_to_remove = []  # Store player projectiles to remove
@@ -108,21 +108,8 @@ def update_projectiles():
         # Check if player projectile is off the canvas
         if pos.y < 0:
             player_projectiles_to_remove.append(pos)
-        
-        # Check collision with defense sprites
-        for defense in defenses:
-            defense_hitbox = defense.get_hitbox()
-            
-            # Check if the player projectile intersects with the defense hitbox
-            if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
-                pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
-                # Remove the player projectile
-                player_projectiles_to_remove.append(pos)
-                
-                # Break out of the loop since the projectile can only hit one defense at a time
-                break
-        
-         # Create a copy of the aliens list to avoid modifying it while iterating
+
+        # Create a copy of the aliens list to avoid modifying it while iterating
         aliens_copy = list(aliens)
         
         # Iterate over aliens
@@ -145,6 +132,27 @@ def update_projectiles():
                 i.score += alien.c
                 
                 # Break out of the loop since the projectile can only hit one alien at a time
+                break
+        
+        # Check collision with defense sprites
+        for defense in defenses:
+            defense_hitbox = defense.get_hitbox()
+            
+            # Check if the player projectile intersects with the defense hitbox
+            if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
+                pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
+                # Remove the player projectile
+                player_projectiles_to_remove.append(pos)
+                
+                # Increment the hit counter of the defense
+                defense.hit_counter += 1
+                
+                # Check if the defense has been hit 9 times
+                if defense.hit_counter == 9:
+                    # Remove the defense from the game
+                    defenses.remove(defense)
+                
+                # Break out of the loop since the projectile can only hit one defense at a time
                 break
     
     # Remove player projectiles that collided with defense sprites or went off the canvas
@@ -344,7 +352,6 @@ class Clock:
         if self.time % time_duration == 0:
             return True
         
-# Modify the DefenseSprite class to adjust hitbox calculation
 class DefenseSprite:
     def __init__(self, pos):
         self.pos = pos
@@ -353,15 +360,17 @@ class DefenseSprite:
         self.img_dim = (self.img.get_width(), self.img.get_height())
         self.frame_width = self.img_dim[0] / 3  # Divide width by number of frames
         self.frame_height = self.img_dim[1]
+        self.hit_counter = 0  # Counter to track hits on the defense
 
     def draw(self, canvas):
-        # Draw only the first frame of the defense sprite
-        canvas.draw_image(self.img, (self.frame_width / 2, self.frame_height / 2),
+        # Draw the current frame of the defense sprite based on hit counter
+        frame_index = min(self.hit_counter // 3, 2)  # Change frame every 3 hits, max index 2
+        canvas.draw_image(self.img, (self.frame_width / 2 + frame_index * self.frame_width, self.frame_height / 2),
                           (self.frame_width, self.frame_height), self.pos.get_p(), (100, 80))
 
     def get_hitbox(self):
         # Adjust the hitbox to create gaps between defense blocks
-        hitbox_width = self.frame_width * 0.5  # Reduce hitbox width
+        hitbox_width = self.frame_width * 0.4  # Reduce hitbox width
         hitbox_height = self.frame_height * 0.5  # Reduce hitbox height
         return (self.pos.x - hitbox_width / 2,  # left
                 self.pos.x + hitbox_width / 2,  # right
@@ -468,15 +477,23 @@ class Integrate:
         for pos in alien_projectiles:
             pos.add(Vector(0, ALIEN_PROJECTILE_SPEED))
             
-            # Check if alien projectile collides with defense sprites
+            # Check collision with defense sprites
             for defense in defenses:
                 defense_hitbox = defense.get_hitbox()
                 
-                # Check if the alien projectile intersects with the defense hitbox
+                # Check if the player projectile intersects with the defense hitbox
                 if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
                     pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
-                    # Add the projectile to the list to remove
+                    # Remove the player projectile
                     alien_projectiles_to_remove.append(pos)
+                    
+                    # Increment the hit counter of the defense
+                    defense.hit_counter += 1
+                    
+                    # Check if the defense has been hit 9 times
+                    if defense.hit_counter == 9:
+                        # Remove the defense from the game
+                        defenses.remove(defense)
                     
                     # Break out of the loop since the projectile can only hit one defense at a time
                     break
