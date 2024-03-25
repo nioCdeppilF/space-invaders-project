@@ -3,14 +3,15 @@ import math
 import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
 
 # URLs for game assets
-GAME_OVER_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Space_Invaders_GameOver_Screen.png"
-DEFENSE_SPRITE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/DefenseSpriteSheet.png"
-GAME_WIN_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/You_Win_Screen.jpg"
-LIVES_COUNTER = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Lives_Sprite.jpg"
-ALIEN_ROW1 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row1.jpg"
-ALIEN_ROW2 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row2.jpg"
-ALIEN_ROW3 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row3.png"
-PLAYER_SPRITE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/player.png"
+GAME_OVER_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/Space_Invaders_GameOver_Screen.png"
+DEFENSE_SPRITE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/DefenseSpriteSheet.png"
+GAME_WIN_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/You_Win_Screen.jpg"
+LIVES_COUNTER = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/Lives_Sprite.jpg"
+ALIEN_ROW1 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/Alien_row1.jpg"
+ALIEN_ROW2 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/Alien_row2.jpg"
+ALIEN_ROW3 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/Alien_row3.png"
+PLAYER_SPRITE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/player.png"
+RED_ALIEN = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/RedAlien.png"
 
 # Constants for canvas dimensions, timer, and projectile properties
 CW = 800
@@ -203,6 +204,25 @@ def check_collision_with_player():
     for projectile in projectiles_to_remove:
         alien_projectiles.remove(projectile)
 
+def check_collision_with_red_alien():
+    global projectile_pos, red_alien, i
+    
+    # Iterate over player projectiles
+    player_projectiles_to_remove = []  # Store player projectiles to remove
+    for pos in projectile_pos[:]:  # Use a copy of the list to avoid modification during iteration
+        # Calculate the distance between projectile and red alien center
+        distance = math.sqrt((pos.x - red_alien.pos.x) ** 2 + (pos.y - red_alien.pos.y) ** 2)
+        
+        # If the distance is less than the sum of radii, it's a collision
+        if distance <= PROJECTILE_RADIUS + 25:  # Assuming the radius of the red alien is 25
+            # Remove the collided projectile and red alien
+            player_projectiles_to_remove.append(pos)
+            red_alien = RedAlien(Vector(-100, random.randint(0, 100)))  # Respawn red alien off-screen
+            i.score += 200  # Increase player's score by 200 points
+
+    # Remove player projectiles that collided with the red alien
+    projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
+
 # Define the Alien class
 class Alien:
     def __init__(self, pos, count):
@@ -376,6 +396,26 @@ class DefenseSprite:
                 self.pos.x + hitbox_width / 2,  # right
                 self.pos.y - hitbox_height / 2, # top
                 self.pos.y + hitbox_height / 2) # bottom
+    
+class RedAlien:
+    def __init__(self, pos):
+        self.pos = pos
+        self.velocity = Vector(-1, 0)  # Red alien moves from right to left
+        self.img = simplegui.load_image(RED_ALIEN)
+        self.img_dim = (self.img.get_width(), self.img.get_height())
+
+    def draw(self, canvas):
+        canvas.draw_image(self.img, (self.img_dim[0] // 2, self.img_dim[1] // 2), self.img_dim,
+                          self.pos.get_p(), (50, 45))
+
+    def update(self):
+        self.pos.add(self.velocity)
+        
+        # Check if the red alien moves off the left side of the screen
+        if self.pos.x + self.img_dim[0] // 2 < 0:
+            # Place the red alien off-screen again with a new position
+            self.pos.x = CW + 1500  # Place it off-screen again
+            self.pos.y = random.randint(0, 100)  # Randomize vertical position
 
 # Define the Integrate class
 class Integrate:
@@ -401,7 +441,7 @@ class Integrate:
         spaceship_pos.add(spaceship_vel)
 
         # Draw the player sprite
-        player.draw(canvas)
+        self.player.draw(canvas)
 
         # Draw the projectiles
         for pos in projectile_pos:
@@ -417,17 +457,22 @@ class Integrate:
         # Update alien projectile positions
         self.update_alien_projectiles()
 
+        # Draw the red alien only if the game is not over
+        if not self.game_over:
+            red_alien.draw(canvas)
+            red_alien.update()
+
         # Draw the lives
         for life in player_lives:
             life.draw(canvas)
 
         # Draw the score
-        i.points(canvas)
+        self.points(canvas)
 
         # Draw the aliens and handle animation
         for alien in aliens:
             alien.draw(canvas)
-            if clock.transition(TIMER):
+            if self.clock.transition(TIMER):
                 alien.next_frame()
 
         # Update the game state
@@ -444,9 +489,8 @@ class Integrate:
             defense.draw(canvas)
         
         # Check for game over condition and display game over screen if necessary
-        i.game_over_text(canvas)
+        self.game_over_text(canvas)
 
-    
     def update_alien_fire(self, aliens):
         global alien_fire_timer, alien_projectiles
 
@@ -543,6 +587,9 @@ class Integrate:
             elif spaceship_pos.x > CW - img_dims[0] // 2:  # Right edge
                 spaceship_pos.x = CW - img_dims[0] // 2
 
+            # Check collision with red alien
+            check_collision_with_red_alien()
+
             # Check if all aliens are removed
             if not self.alien_list:
                 # Check if the player has remaining lives
@@ -558,6 +605,7 @@ class Integrate:
                 self.game_over = True
                 self.game_won = False
                 self.game_over_handlers_removed = True
+
 
     def game_over_text(self, canvas):
         if self.game_over:
@@ -624,6 +672,9 @@ clock = Clock()
 
 # Initialize the player sprite
 player = PlayerSprite(spaceship_pos)
+
+# Instantiate the red alien
+red_alien = RedAlien(Vector(-100, random.randint(0, 100)))
 
 # Integrate everything into the game
 i = Integrate(clock, aliens, player_lives, player)
