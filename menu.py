@@ -1,4 +1,5 @@
 import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
+import subprocess
 
 #Initalising the logo properties
 logo_img = simplegui.load_image("https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Sprites/logo.png")
@@ -35,7 +36,8 @@ def mouse_handler(pos):
     #Check if click position is within the start button
     if (pos[0] >= (WIDTH-start_newdims[0]) / 2 and pos[0]<= (WIDTH + start_newdims[0]) / 2 and pos[1] >= (HEIGHT - start_newdims[1]) / 2 and pos[1] <= (HEIGHT + start_newdims[1]) / 2):
         #Start the game
-        quit()#Replace with actual game, quit() put in to prevent ident block.
+        subprocess.run(["python", "SpaceInvadersV6.py"])
+        quit()
     if (pos[0] >= (WIDTH-exit_newdims[0]) / 2 and pos[0]<= (WIDTH + exit_newdims[0]) / 2 and pos[1] >= (HEIGHT - exit_newdims[1]+200) / 2 and pos[1] <= (HEIGHT + exit_newdims[1]+200) / 2):
         #Exit the game by stopping frame animation
         frame.stop()
