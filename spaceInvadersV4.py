@@ -4,6 +4,7 @@ import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
 
 # URLs for game assets
 GAME_OVER_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Space_Invaders_GameOver_Screen.png"
+DEFENSE_SPRITE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/DefenseSpriteSheet.png"
 GAME_WIN_MESSAGE = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/You_Win_Screen.jpg"
 LIVES_COUNTER = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Lives_Sprite.jpg"
 ALIEN_ROW1 = "https://raw.githubusercontent.com/nioCdeppilF/space-invaders-project/main/Alien_row1.jpg"
@@ -78,7 +79,7 @@ class Vector:
         return self.copy().subtract(other)
 
 # Initial position and velocity of the spaceship (as vectors)
-spaceship_pos = Vector(CW // 2, CH - 150)
+spaceship_pos = Vector(CW // 2, CH - 135)
 spaceship_vel = Vector()
 
 # Define the PlayerSprite class
@@ -96,15 +97,32 @@ class PlayerSprite:
         # Update the position based on the velocity
         self.pos.add(self.vel)
 
-# Update function for projectile collisions with aliens
 def update_projectiles():
-    global projectile_pos, aliens, i
+    global projectile_pos, aliens
     
-    # Iterate over projectiles
-    for pos in projectile_pos:
+    # Iterate over player projectiles
+    player_projectiles_to_remove = []  # Store player projectiles to remove
+    for pos in projectile_pos[:]:  # Use a copy of the list to avoid modification during iteration
         pos.add(Vector(0, -projectile_speed))
         
-        # Create a copy of the aliens list to avoid modifying it while iterating
+        # Check if player projectile is off the canvas
+        if pos.y < 0:
+            player_projectiles_to_remove.append(pos)
+        
+        # Check collision with defense sprites
+        for defense in defenses:
+            defense_hitbox = defense.get_hitbox()
+            
+            # Check if the player projectile intersects with the defense hitbox
+            if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
+                pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
+                # Remove the player projectile
+                player_projectiles_to_remove.append(pos)
+                
+                # Break out of the loop since the projectile can only hit one defense at a time
+                break
+        
+         # Create a copy of the aliens list to avoid modifying it while iterating
         aliens_copy = list(aliens)
         
         # Iterate over aliens
@@ -129,8 +147,8 @@ def update_projectiles():
                 # Break out of the loop since the projectile can only hit one alien at a time
                 break
     
-    # Remove projectiles that have left the frame
-    projectile_pos = [pos for pos in projectile_pos if pos.y > 0]
+    # Remove player projectiles that collided with defense sprites or went off the canvas
+    projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
 
 # Update keydown handler
 def keydown(key):
@@ -325,6 +343,30 @@ class Clock:
     def transition(self, time_duration):
         if self.time % time_duration == 0:
             return True
+        
+# Modify the DefenseSprite class to adjust hitbox calculation
+class DefenseSprite:
+    def __init__(self, pos):
+        self.pos = pos
+        self.img = simplegui.load_image(DEFENSE_SPRITE)
+        # Set the image dimensions to match the actual size of the image
+        self.img_dim = (self.img.get_width(), self.img.get_height())
+        self.frame_width = self.img_dim[0] / 3  # Divide width by number of frames
+        self.frame_height = self.img_dim[1]
+
+    def draw(self, canvas):
+        # Draw only the first frame of the defense sprite
+        canvas.draw_image(self.img, (self.frame_width / 2, self.frame_height / 2),
+                          (self.frame_width, self.frame_height), self.pos.get_p(), (100, 80))
+
+    def get_hitbox(self):
+        # Adjust the hitbox to create gaps between defense blocks
+        hitbox_width = self.frame_width * 0.5  # Reduce hitbox width
+        hitbox_height = self.frame_height * 0.5  # Reduce hitbox height
+        return (self.pos.x - hitbox_width / 2,  # left
+                self.pos.x + hitbox_width / 2,  # right
+                self.pos.y - hitbox_height / 2, # top
+                self.pos.y + hitbox_height / 2) # bottom
 
 # Define the Integrate class
 class Integrate:
@@ -387,6 +429,10 @@ class Integrate:
 
         # Update alien fire
         self.update_alien_fire(aliens)
+
+        # Draw defense sprites
+        for defense in defenses:
+            defense.draw(canvas)
         
         # Check for game over condition and display game over screen if necessary
         i.game_over_text(canvas)
@@ -418,11 +464,25 @@ class Integrate:
         global alien_projectiles
 
         # Iterate over alien projectiles
+        alien_projectiles_to_remove = []  # Store projectiles to remove to avoid modifying list while iterating
         for pos in alien_projectiles:
             pos.add(Vector(0, ALIEN_PROJECTILE_SPEED))
+            
+            # Check if alien projectile collides with defense sprites
+            for defense in defenses:
+                defense_hitbox = defense.get_hitbox()
+                
+                # Check if the alien projectile intersects with the defense hitbox
+                if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
+                    pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
+                    # Add the projectile to the list to remove
+                    alien_projectiles_to_remove.append(pos)
+                    
+                    # Break out of the loop since the projectile can only hit one defense at a time
+                    break
 
-        # Remove projectiles that have left the frame
-        alien_projectiles = [pos for pos in alien_projectiles if pos.y < CH]
+        # Remove collided projectiles from the list
+        alien_projectiles = [pos for pos in alien_projectiles if pos not in alien_projectiles_to_remove]
 
     def calc_lives(self):
         local_counter = 3
@@ -532,6 +592,14 @@ for i in range(5):
 player_lives = []
 for i in range(3):
     player_lives.append(Lives((CW - 50 - (i * 100), CH - 20), False))
+
+# List to store instances of defense sprites
+defenses = []
+
+# Initialize defense sprites and add them to the list
+defenses.append(DefenseSprite(Vector(200, 400)))
+defenses.append(DefenseSprite(Vector(400, 400)))
+defenses.append(DefenseSprite(Vector(600, 400)))
 
 # Create a frame
 frame = simplegui.create_frame("Aliens", CW, CH)
