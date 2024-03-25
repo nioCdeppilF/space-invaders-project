@@ -426,6 +426,7 @@ class Integrate:
         self.player = player
         self.game_won = False
         self.score = 0
+        self.score_written = False 
 
         self.vel = Vector(0.5, 0)
         self.game_over = False
@@ -641,6 +642,16 @@ class Integrate:
                 canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
                 canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
                 canvas.draw_text(str(self.calc_lives()), (CW - 20, 31), 30, '#ff0000')
+
+            # Write score to file only if it hasn't been written before
+            if not self.score_written:
+                self.write_to_file()
+                self.score_written = True  # Update the flag to indicate that the score has been written
+
+    def write_to_file(self):
+        # Write player name and score to a text file
+        with open("scores.txt", "a") as file:
+            file.write(f"{self.score}\n")
 
 # List to store instances of aliens
 aliens = []
