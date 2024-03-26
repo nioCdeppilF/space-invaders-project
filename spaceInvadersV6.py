@@ -1,5 +1,4 @@
-import random
-import math
+import random, math, threading, time
 import SimpleGUICS2Pygame.simpleguics2pygame as simplegui
 
 # URLs for game assets
@@ -38,6 +37,8 @@ projectile_pos = []
 
 # Velocity of the projectiles
 projectile_speed = 2
+
+end_timer = None
 
 # Define the Vector class for handling positions and velocities
 class Vector:
@@ -609,7 +610,13 @@ class Integrate:
 
 
     def game_over_text(self, canvas):
+        global end_timer
         if self.game_over:
+            # Write score to file only if it hasn't been written before
+            if not self.score_written:
+                self.write_to_file()
+                self.score_written = True  # Update the flag to indicate that the score has been written
+
             if self.game_won:
                 # Display "GAME OVER, YOU WON" message
                 win_img = simplegui.load_image(GAME_WIN_MESSAGE)
@@ -626,6 +633,9 @@ class Integrate:
                 canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
                 canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
                 canvas.draw_text(str(self.calc_lives()), (CW - 20, 31), 30, '#ff0000')
+
+                end_timer = threading.Timer(2, end_game)
+                end_timer.start()
             else:
                 # Display "GAME OVER" message
                 go_img = simplegui.load_image(GAME_OVER_MESSAGE)
@@ -642,21 +652,25 @@ class Integrate:
                 canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
                 canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
                 canvas.draw_text(str(self.calc_lives()), (CW - 20, 31), 30, '#ff0000')
+                end_timer = threading.Timer(2, end_game)
+                end_timer.start()
 
-            # Write score to file only if it hasn't been written before
-            if not self.score_written:
-                self.write_to_file()
-                self.score_written = True  # Update the flag to indicate that the score has been written
 
     def write_to_file(self):
         # Write player name and score to a text file
         with open("scores.txt", "a") as file:
-            file.write(f"{self.score}\n")
+            file.write(f"\n{self.score}")
+
+def end_game():
+    global end_timer
+    # Check if the timer is active before stopping it
+    if end_timer and end_timer.is_alive():
+        end_timer.cancel()
+    frame.stop()
 
 # List to store instances of aliens
 aliens = []
 j_d = 15
-point = 40
 count = 0
 for i in range(5):
     for j in range(11):
