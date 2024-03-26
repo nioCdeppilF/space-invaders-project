@@ -590,6 +590,7 @@ class Integrate:
                                 (self.width_gom, self.height_gom), (CW / 2, CH / 2),
                                 (CW * 3 / 4, CH * 1 / 2))
                 canvas.draw_text("Score:", (0, 30), 30, 'White')
+                canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
                 end_timer = threading.Timer(2, end_game)
                 end_timer.start()
 
