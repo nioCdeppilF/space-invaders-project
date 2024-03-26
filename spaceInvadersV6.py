@@ -84,82 +84,6 @@ class Vector:
 spaceship_pos = Vector(CW // 2, CH - 135)
 spaceship_vel = Vector()
 
-# Define the PlayerSprite class
-class PlayerSprite:
-    def __init__(self, pos):
-        self.pos = pos
-        self.vel = Vector()  # Add velocity attribute
-        self.img_dim = (55,32)
-
-    def draw(self, canvas):
-        # Draw the player sprite on the canvas at the position self.pos
-        canvas.draw_image(img, img_centre, img_dims, self.pos.get_p(), self.img_dim)
-
-    def update(self):
-        # Update the position based on the velocity
-        self.pos.add(self.vel)
-
-def update_projectiles():
-    global projectile_pos, defenses
-    
-    # Iterate over player projectiles
-    player_projectiles_to_remove = []  # Store player projectiles to remove
-    for pos in projectile_pos[:]:  # Use a copy of the list to avoid modification during iteration
-        pos.add(Vector(0, -projectile_speed))
-        
-        # Check if player projectile is off the canvas
-        if pos.y < 0:
-            player_projectiles_to_remove.append(pos)
-
-        # Create a copy of the aliens list to avoid modifying it while iterating
-        aliens_copy = list(aliens)
-        
-        # Iterate over aliens
-        for alien in aliens_copy:
-            # Calculate the actual hitbox for the alien sprite
-            hitbox = (alien.pos.x - alien.hitbox_width / 2,  # left
-                      alien.pos.x + alien.hitbox_width / 2,  # right
-                      alien.pos.y - alien.hitbox_height / 2, # top
-                      alien.pos.y + alien.hitbox_height / 2) # bottom
-            
-            # Check if the projectile intersects with the hitbox
-            if (pos.x >= hitbox[0] and pos.x <= hitbox[1] and
-                pos.y >= hitbox[2] and pos.y <= hitbox[3]):
-                
-                # Remove the collided projectile and alien
-                projectile_pos.remove(pos)
-                aliens.remove(alien)
-                
-                # Update the score
-                i.score += alien.c
-                
-                # Break out of the loop since the projectile can only hit one alien at a time
-                break
-        
-        # Check collision with defense sprites
-        for defense in defenses:
-            defense_hitbox = defense.get_hitbox()
-            
-            # Check if the player projectile intersects with the defense hitbox
-            if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
-                pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
-                # Remove the player projectile
-                player_projectiles_to_remove.append(pos)
-                
-                # Increment the hit counter of the defense
-                defense.hit_counter += 1
-                
-                # Check if the defense has been hit 9 times
-                if defense.hit_counter == 9:
-                    # Remove the defense from the game
-                    defenses.remove(defense)
-                
-                # Break out of the loop since the projectile can only hit one defense at a time
-                break
-    
-    # Remove player projectiles that collided with defense sprites or went off the canvas
-    projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
-
 # Update keydown handler
 def keydown(key):
     global spaceship_vel
@@ -178,51 +102,20 @@ def keyup(key):
     if key == simplegui.KEY_MAP['left'] or key == simplegui.KEY_MAP['right']:
         spaceship_vel.x = 0
 
-# Collision detection function for alien projectiles and player sprite
-def check_collision_with_player():
-    global alien_projectiles, player_lives
-    
-    # Iterate over alien projectiles
-    projectiles_to_remove = []  # Store projectiles to remove to avoid modifying list while iterating
-    for projectile in alien_projectiles:
-        # Calculate the distance between projectile and player sprite center
-        distance = math.sqrt((projectile.x - player.pos.x) ** 2 + (projectile.y - player.pos.y) ** 2)
-        
-        # If the distance is less than the sum of radii, it's a collision
-        if distance <= PROJECTILE_RADIUS + img_dims[1] // 2:
-            # Remove the projectile
-            projectiles_to_remove.append(projectile)
-            
-            # Reduce player lives count
-            if player_lives:
-                player_lives.pop()
-                
-            # Check if player has run out of lives
-            if not player_lives:
-                i.game_over = True
+# Define the PlayerSprite class
+class PlayerSprite:
+    def __init__(self, pos):
+        self.pos = pos
+        self.vel = Vector()  # Add velocity attribute
+        self.img_dim = (55,32)
 
-    # Remove collided projectiles from the list
-    for projectile in projectiles_to_remove:
-        alien_projectiles.remove(projectile)
+    def draw(self, canvas):
+        # Draw the player sprite on the canvas at the position self.pos
+        canvas.draw_image(img, img_centre, img_dims, self.pos.get_p(), self.img_dim)
 
-def check_collision_with_red_alien():
-    global projectile_pos, red_alien, i
-    
-    # Iterate over player projectiles
-    player_projectiles_to_remove = []  # Store player projectiles to remove
-    for pos in projectile_pos[:]:  # Use a copy of the list to avoid modification during iteration
-        # Calculate the distance between projectile and red alien center
-        distance = math.sqrt((pos.x - red_alien.pos.x) ** 2 + (pos.y - red_alien.pos.y) ** 2)
-        
-        # If the distance is less than the sum of radii, it's a collision
-        if distance <= PROJECTILE_RADIUS + 25:  # Assuming the radius of the red alien is 25
-            # Remove the collided projectile and red alien
-            player_projectiles_to_remove.append(pos)
-            red_alien = RedAlien(Vector(-100, random.randint(0, 100)))  # Respawn red alien off-screen
-            i.score += 200  # Increase player's score by 200 points
-
-    # Remove player projectiles that collided with the red alien
-    projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
+    def update(self):
+        # Update the position based on the velocity
+        self.pos.add(self.vel)
 
 # Define the Alien class
 class Alien:
@@ -453,9 +346,6 @@ class Integrate:
         for pos in alien_projectiles:
             canvas.draw_circle(pos.get_p(), PROJECTILE_RADIUS, 1, 'Red', 'Red')
 
-        # Update projectile positions
-        update_projectiles()
-
         # Update alien projectile positions
         self.update_alien_projectiles()
 
@@ -481,7 +371,7 @@ class Integrate:
         self.update()
 
         # Update collisions
-        check_collision_with_player()
+        self.handle_collisions()
 
         # Update alien fire
         self.update_alien_fire(aliens)
@@ -546,6 +436,61 @@ class Integrate:
 
         # Remove collided projectiles from the list
         alien_projectiles = [pos for pos in alien_projectiles if pos not in alien_projectiles_to_remove]
+    
+    def handle_collisions(self):
+        global alien_projectiles, projectile_pos, red_alien
+        projectiles_to_remove = []
+        player_projectiles_to_remove = []
+        
+        # Collision detection function for alien projectiles and player sprite
+        for projectile in alien_projectiles:
+            distance = math.sqrt((projectile.x - player.pos.x) ** 2 + (projectile.y - player.pos.y) ** 2)
+            if distance <= PROJECTILE_RADIUS + img_dims[1] // 2:
+                projectiles_to_remove.append(projectile)
+                if player_lives:
+                    player_lives.pop()
+                if not player_lives:
+                    i.game_over = True
+
+        for projectile in projectiles_to_remove:
+            alien_projectiles.remove(projectile)
+        
+        # Collision detection function for player projectiles and red alien
+        for pos in projectile_pos[:]:
+            distance = math.sqrt((pos.x - red_alien.pos.x) ** 2 + (pos.y - red_alien.pos.y) ** 2)
+            if distance <= PROJECTILE_RADIUS + 25:
+                player_projectiles_to_remove.append(pos)
+                red_alien = RedAlien(Vector(-100, random.randint(0, 100)))
+                i.score += 200
+
+        projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
+        
+        # Collision detection function for player projectiles and aliens
+        for pos in projectile_pos[:]:
+            pos.add(Vector(0, -projectile_speed))
+            if pos.y < 0:
+                player_projectiles_to_remove.append(pos)
+            aliens_copy = list(aliens)
+            for alien in aliens_copy:
+                hitbox = (alien.pos.x - alien.hitbox_width / 2, alien.pos.x + alien.hitbox_width / 2,
+                          alien.pos.y - alien.hitbox_height / 2, alien.pos.y + alien.hitbox_height / 2)
+                if (pos.x >= hitbox[0] and pos.x <= hitbox[1] and
+                    pos.y >= hitbox[2] and pos.y <= hitbox[3]):
+                    projectile_pos.remove(pos)
+                    aliens.remove(alien)
+                    i.score += alien.c
+                    break
+            for defense in defenses:
+                defense_hitbox = defense.get_hitbox()
+                if (pos.x >= defense_hitbox[0] and pos.x <= defense_hitbox[1] and
+                    pos.y >= defense_hitbox[2] and pos.y <= defense_hitbox[3]):
+                    player_projectiles_to_remove.append(pos)
+                    defense.hit_counter += 1
+                    if defense.hit_counter == 9:
+                        defenses.remove(defense)
+                    break
+
+        projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
 
     def calc_lives(self):
         local_counter = 3
@@ -589,8 +534,7 @@ class Integrate:
             elif spaceship_pos.x > CW - img_dims[0] // 2:  # Right edge
                 spaceship_pos.x = CW - img_dims[0] // 2
 
-            # Check collision with red alien
-            check_collision_with_red_alien()
+            self.handle_collisions()
 
             # Check if all aliens are removed
             if not self.alien_list:
