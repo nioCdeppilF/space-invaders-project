@@ -37,7 +37,7 @@ def mouse_handler(pos):
     #Check if click position is within the start button
     if (pos[0] >= (WIDTH-start_newdims[0]) / 2 and pos[0]<= (WIDTH + start_newdims[0]) / 2 and pos[1] >= (HEIGHT - start_newdims[1]) / 2 and pos[1] <= (HEIGHT + start_newdims[1]) / 2):
         # Start the game by running SpaceInvadersV1.py
-        subprocess.run(["python", "SpaceInvadersV6.py"])
+        subprocess.run(["python", "SpaceInvaders.py"])
     if (pos[0] >= (WIDTH-exit_newdims[0]) / 2 and pos[0]<= (WIDTH + exit_newdims[0]) / 2 and pos[1] >= (HEIGHT - exit_newdims[1]+200) / 2 and pos[1] <= (HEIGHT + exit_newdims[1]+200) / 2):
         #Exit the game by stopping frame animation
         frame.stop()
