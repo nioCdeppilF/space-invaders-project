@@ -37,7 +37,6 @@ def mouse_handler(pos):
     if (pos[0] >= (WIDTH-start_newdims[0]) / 2 and pos[0]<= (WIDTH + start_newdims[0]) / 2 and pos[1] >= (HEIGHT - start_newdims[1]) / 2 and pos[1] <= (HEIGHT + start_newdims[1]) / 2):
         #Start the game
         subprocess.run(["python", "SpaceInvadersV6.py"])
-        quit()
     if (pos[0] >= (WIDTH-exit_newdims[0]) / 2 and pos[0]<= (WIDTH + exit_newdims[0]) / 2 and pos[1] >= (HEIGHT - exit_newdims[1]+200) / 2 and pos[1] <= (HEIGHT + exit_newdims[1]+200) / 2):
         #Exit the game by stopping frame animation
         frame.stop()
