@@ -42,7 +42,6 @@ def mouse_handler(pos):
         #Exit the game by stopping frame animation
         frame.stop()
         print("Thank you for playing!!!")
-        quit()
                                                              
 def draw(canvas):
     #Displays all the images onto the canvas
