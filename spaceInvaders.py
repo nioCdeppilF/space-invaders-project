@@ -469,7 +469,12 @@ class Integrate:
                     pos.y >= hitbox[2] and pos.y <= hitbox[3]):
                     projectile_pos.remove(pos)
                     aliens.remove(alien)
-                    i.score += alien.c
+                    if alien.c < 11:
+                        i.score += 40
+                    elif alien.c < 33:
+                        i.score += 20
+                    else:
+                        i.score += 10
                     break
             for defense in defenses:
                 defense_hitbox = defense.get_hitbox()
