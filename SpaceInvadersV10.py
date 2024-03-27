@@ -489,7 +489,17 @@ class Integrate:
             if distance <= PROJECTILE_RADIUS + 25:
                 player_projectiles_to_remove.append(pos)
                 red_alien = RedAlien(Vector(-100, random.randint(0, 100)))
-                i.score += 200
+                mystery = random.randint(0, 6)
+                if mystery == 1:
+                    i.score += 150
+                elif mystery == 2:
+                    i.score += 200
+                elif mystery == 3:
+                    i.score += 300
+                elif mystery == 4:
+                    i.score += 100
+                else:
+                    i.score += 50
 
         projectile_pos = [proj for proj in projectile_pos if proj not in player_projectiles_to_remove]
         
