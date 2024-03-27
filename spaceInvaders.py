@@ -130,9 +130,7 @@ class Lives:
         self.frame_centre_y = self.frame_height / 2
 
     def next_frame(self):
-        self.frame_index[0] = (self.frame_index[0] + 1) % 2
-        if self.frame_index[0] == 0:
-            self.frame_index[1] = (self.frame_index[1] + 1) % 2
+        self.frame_index[1] = (self.frame_index[1] + 1) % 2
 
     def takeDamage(self):
         if self.framecount < self.num_frame:
@@ -253,18 +251,6 @@ class Alien:
     def fire_projectile(self, player_pos):
         alien_pos = Vector(self.pos.x, self.pos.y + self.height / 2)
         return Vector(player_pos.x - alien_pos.x, player_pos.y - alien_pos.y).multiply(0.05)
-
-# Define the Clock class
-class Clock:
-    def __init__(self):
-        self.time = 0
-
-    def tick(self):
-        self.time += 1
-
-    def transition(self, time_duration):
-        if self.time % time_duration == 0:
-            return True
         
 class DefenseSprite:
     def __init__(self, pos):
@@ -313,8 +299,7 @@ class RedAlien:
 
 # Define the Integrate class
 class Integrate:
-    def __init__(self, clock, alien, lives, player):
-        self.clock = clock
+    def __init__(self, alien, lives, player):
         self.alien_list = alien
         self.lives = lives
         self.player = player
@@ -364,8 +349,7 @@ class Integrate:
         # Draw the aliens and handle animation
         for alien in aliens:
             alien.draw(canvas)
-            if self.clock.transition(TIMER):
-                alien.next_frame()
+            alien.next_frame()
 
         # Update the game state
         self.update()
@@ -438,7 +422,7 @@ class Integrate:
         alien_projectiles = [pos for pos in alien_projectiles if pos not in alien_projectiles_to_remove]
     
     def handle_collisions(self):
-        global alien_projectiles, projectile_pos, red_alien
+        global alien_projectiles, projectile_pos, red_alien, player_lives_inlist
         projectiles_to_remove = []
         player_projectiles_to_remove = []
         
@@ -447,8 +431,15 @@ class Integrate:
             distance = math.sqrt((projectile.x - player.pos.x) ** 2 + (projectile.y - player.pos.y) ** 2)
             if distance <= PROJECTILE_RADIUS + img_dims[1] // 2:
                 projectiles_to_remove.append(projectile)
-                if player_lives:
-                    player_lives.pop()
+                if player_lives: # system makes lives change colour instead of just remove them
+                    player_lives_inlist -= 1
+                    if player_lives_inlist == 2:
+                        player_lives[2].takeDamage()
+                    elif player_lives_inlist == 1:
+                        player_lives[1].takeDamage()
+                    elif player_lives_inlist == 0:
+                        player_lives[0].takeDamage()
+                    #player_lives.pop()
                 if not player_lives:
                     i.game_over = True
 
@@ -564,16 +555,17 @@ class Integrate:
                 # Display "GAME OVER, YOU WON" message
                 win_img = GAME_WIN_MESSAGE
                 self.width_gom, self.height_gom = win_img.get_width(), win_img.get_height()
-                if self.clock.transition(TIMER):
-                    alien_projectiles.clear()
-                    self.alien_list.clear()
-                    self.lives.clear()
-                    self.score_colour, self.score_num_colour = '#000000', '#000000'
+                alien_projectiles.clear()
+                self.alien_list.clear()
+                self.lives.clear()
+                self.score_colour, self.score_num_colour = '#000000', '#000000'
                 canvas.draw_image(win_img, (self.width_gom / 2, self.height_gom / 2),
                                 (self.width_gom, self.height_gom), (CW / 2, CH / 2),
                                 (CW * 3 / 4, CH * 1 / 2))
                 canvas.draw_text("Score:", (0, 30), 30, 'White')
                 canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
+                canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
+                canvas.draw_text(f"{self.calc_lives()}", (CW - 20, 31), 30, '#00fc04')
 
                 end_timer = threading.Timer(2, end_game)
                 end_timer.start()
@@ -581,19 +573,20 @@ class Integrate:
                 # Display "GAME OVER" message
                 go_img = GAME_OVER_MESSAGE
                 self.width_gom, self.height_gom = go_img.get_width(), go_img.get_height()
-                if self.clock.transition(TIMER):
-                    alien_projectiles.clear()
-                    self.alien_list.clear()
-                    self.lives.clear()
-                    self.score_colour, self.score_num_colour = '#000000', '#000000'
+                alien_projectiles.clear()
+                self.alien_list.clear()
+                self.lives.clear()
+                self.score_colour, self.score_num_colour = '#000000', '#000000'
                 canvas.draw_image(go_img, (self.width_gom / 2, self.height_gom / 2),
                                 (self.width_gom, self.height_gom), (CW / 2, CH / 2),
                                 (CW * 3 / 4, CH * 1 / 2))
                 canvas.draw_text("Score:", (0, 30), 30, 'White')
                 canvas.draw_text(str(self.score), (80, 31), 30, '#00fc04')
+                canvas.draw_text("Lives:", (CW - 100, 30), 30, 'White')
+                canvas.draw_text("0", (CW - 20, 31), 30, '#ff0000')
+
                 end_timer = threading.Timer(2, end_game)
                 end_timer.start()
-
 
     def write_to_file(self):
         # Write player name and score to a text file
@@ -619,6 +612,7 @@ for i in range(5):
 
 # List to store instances of lives
 player_lives = []
+player_lives_inlist = 3
 for i in range(3):
     player_lives.append(Lives((CW - 50 - (i * 100), CH - 20), False))
 
@@ -632,7 +626,6 @@ defenses.append(DefenseSprite(Vector(600, 400)))
 
 # Create a frame
 frame = simplegui.create_frame("Aliens", CW, CH)
-clock = Clock()
 
 # Initialize the player sprite
 player = PlayerSprite(spaceship_pos)
@@ -641,7 +634,7 @@ player = PlayerSprite(spaceship_pos)
 red_alien = RedAlien(Vector(-100, random.randint(0, 100)))
 
 # Integrate everything into the game
-i = Integrate(clock, aliens, player_lives, player)
+i = Integrate(aliens, player_lives, player)
 
 # Set event handlers
 if not i.game_over_handlers_removed:
