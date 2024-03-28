@@ -16,7 +16,7 @@ RED_ALIEN = simplegui.load_image("https://raw.githubusercontent.com/nioCdeppilF/
 CW = 800
 CH = 600
 
-ALIEN_SPEED = random.randint(10, 50) # affects the speed of the aliens
+ALIEN_SPEED = random.randint(20, 50) # affects the speed of the aliens
 
 DEADLINE = CH - 100 - 70
 
@@ -25,8 +25,8 @@ PROJECTILE_RADIUS = 3
 # Constants for Alien projectiles
 alien_projectiles = []
 
-if ALIEN_SPEED <= 20: #Added varying projectile speed
-    ALIEN_PROJECTILE_SPEED = 7
+if ALIEN_SPEED <= 30: #Added varying projectile speed
+    ALIEN_PROJECTILE_SPEED = 6
 else:
     ALIEN_PROJECTILE_SPEED = 4
 
@@ -43,7 +43,7 @@ img_centre = (55, 32)
 projectile_pos = []
 
 # Velocity of the projectiles
-if ALIEN_SPEED > 20:
+if ALIEN_SPEED > 30:
     projectile_speed = 2
 else:
     projectile_speed = 3.5
